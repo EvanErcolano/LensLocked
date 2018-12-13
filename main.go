@@ -15,6 +15,7 @@ func handlerFunc(w http.ResponseWriter, r *http.Request) {
 	} else if r.URL.Path == "/" {
 		fmt.Fprint(w, "<h1> Welcome to my awesome website </h1>")
 	} else {
+		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "404 not found")
 	}
 }
