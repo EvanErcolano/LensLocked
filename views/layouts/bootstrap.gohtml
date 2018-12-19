@@ -1,0 +1,24 @@
+{{define "bootstrap"}}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>LensLocked.com</title>
+        <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+
+    </head>
+
+    <body>
+
+        <div class="container-fluid">
+            {{template "yield" .}}
+            <!-- Out content will go here ... somehow -->
+        </div>
+
+        <!-- jquery & boostrap JS -->
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
+        </script>
+        <script src="//maxcdn.boostrapcdn.com/boostrap/3.3.7.js/bootstrap.min.js">
+        </script>
+    </body>
+</html>
+{{end}}
