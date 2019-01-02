@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"lenslocked.com/views"
@@ -19,7 +20,14 @@ type Users struct {
 	NewView *views.View
 }
 
-// this method is on the *User type
+// New is used to render the form where they can create a new user account
+// GET / signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 	u.NewView.Render(w, nil)
+}
+
+//Create is used to process the signup form to create a new account
+// POST /signup
+func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "This is a temporary response. ")
 }
