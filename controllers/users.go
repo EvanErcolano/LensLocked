@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/schema"
+
 	"lenslocked.com/views"
 )
 
@@ -26,6 +28,12 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 	u.NewView.Render(w, nil)
 }
 
+// SignupForm
+type SignupForm struct {
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
+
 //Create is used to process the signup form to create a new account
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +41,11 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	fmt.Fprintln(w, r.PostForm["email"])
-	fmt.Fprintln(w, r.PostForm["password"])
+	decoder := schema.NewDecoder()
+	var form SignupForm
+	if err := decoder.Decode(&form, r.PostForm); err != nil {
+		panic(err)
+	}
+	fmt.Fprintln(w, form)
+
 }
