@@ -37,12 +37,19 @@ type UserService struct {
 }
 
 // DesctructiveReset drop a table and remigrates.
-func (us *UserService) DesctructiveReset() {
-	newDb := us.db.DropTableIfExists(&User{})
-	if newDb.Error != nil {
-		panic(newDb.GetErrors)
+func (us *UserService) DesctructiveReset() error {
+	if err := us.db.DropTableIfExists(&User{}).Error; err != nil {
+		return err
 	}
-	us.db.AutoMigrate(&User{})
+	return us.AutoMigrate()
+}
+
+func (us *UserService) AutoMigrate() error {
+	if err := us.db.AutoMigrate(&User{}).Error; err != nil {
+		return err
+	}
+	return nil
+
 }
 
 //  The parenthesis before the function name is the Go way of defining the object
