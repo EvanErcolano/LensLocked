@@ -3,6 +3,8 @@ package models
 import (
 	"errors"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
@@ -44,12 +46,12 @@ func (us *UserService) DesctructiveReset() error {
 	return us.AutoMigrate()
 }
 
+//AutoMigrate will attempt to automically migrate the user table
 func (us *UserService) AutoMigrate() error {
 	if err := us.db.AutoMigrate(&User{}).Error; err != nil {
 		return err
 	}
 	return nil
-
 }
 
 //  The parenthesis before the function name is the Go way of defining the object
@@ -92,6 +94,12 @@ func first(db *gorm.DB, dst interface{}) error {
 
 // Create creates a user in the db via GORM
 func (us *UserService) Create(user *User) error {
+	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hashedBytes)
+	user.Password = ""
 	return us.db.Create(user).Error
 }
 
@@ -118,6 +126,8 @@ func (us *UserService) Close() error {
 
 type User struct {
 	gorm.Model
-	Name  string
-	Email string `gorm:"not null;unique_index"`
+	Name         string
+	Email        string `gorm:"not null;unique_index"`
+	Password     string `gorm:"-"` // - <- tells gorm to ignore this
+	PasswordHash string `gorm:"not null"`
 }
