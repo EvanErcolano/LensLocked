@@ -28,6 +28,7 @@ func main() {
 	must(err)
 	defer us.Close()
 	us.AutoMigrate()
+	// us.DesctructiveReset()
 
 	staticController := controllers.NewStatic()
 	usersController := controllers.NewUsers(us)
@@ -37,6 +38,7 @@ func main() {
 	r.Handle("/contact", staticController.Contact).Methods("GET")
 	r.HandleFunc("/signup", usersController.New).Methods("GET")
 	r.HandleFunc("/signup", usersController.Create).Methods("POST")
+	fmt.Println("Starting the server on :3000.....")
 	http.ListenAndServe(":3000", r)
 }
 
