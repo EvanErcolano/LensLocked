@@ -28,7 +28,7 @@ func main() {
 	must(err)
 	defer us.Close()
 	us.AutoMigrate()
-	// us.DesctructiveReset()
+	// us.DestructiveReset()
 
 	staticController := controllers.NewStatic()
 	usersController := controllers.NewUsers(us)

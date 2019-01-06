@@ -15,6 +15,9 @@ var (
 
 	// ErrInvalidID is returned when an invalid ID is provided to a method like delete
 	ErrInvalidID = errors.New("models: ID provided was invalid")
+
+	// ErrInvalidPassword is returned when an invalid password is provided
+	ErrInvalidPassword = errors.New("models: Password provided was invalid")
 )
 
 const userPwPepper = "aaaafe93-7942-4e3d-a4fc-e295ba99d571"
@@ -40,26 +43,22 @@ type UserService struct {
 	db *gorm.DB
 }
 
-// DesctructiveReset drop a table and remigrates.
-func (us *UserService) DesctructiveReset() error {
+// DestructiveReset drops the user table and rebuilds it
+func (us *UserService) DestructiveReset() error {
 	if err := us.db.DropTableIfExists(&User{}).Error; err != nil {
 		return err
 	}
 	return us.AutoMigrate()
 }
 
-//AutoMigrate will attempt to automically migrate the user table
+// AutoMigrate will attempt to automatically migrate the
+// users table
 func (us *UserService) AutoMigrate() error {
 	if err := us.db.AutoMigrate(&User{}).Error; err != nil {
 		return err
 	}
 	return nil
 }
-
-//  The parenthesis before the function name is the Go way of defining the object
-//  on which these functions will operate.  So this function is available on the
-//  user service
-// func (RECEIVER TYPE) funcName(params) (return types)
 
 // ByID will look up the user with the id provided.
 // 1 - user, nil 		(found user)
@@ -81,6 +80,35 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 	db := us.db.Where("email = ?", email)
 	err := first(db, &user)
 	return &user, err
+}
+
+// Authenticate can be used to authenticate a user with the
+// provided email address and password.
+// If the email address provided is invalid, this will return
+//   nil, ErrNotFound
+// If the password provided is invalid, this will return
+//   nil, ErrInvalidPassword
+// If the email and password are both valid, this will return
+//   user, nil
+// Otherwise if another error is encountered this will return
+//   nil, error
+func (us *UserService) Authenticate(email, password string) (*User, error) {
+	foundUser, err := us.ByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+userPwPepper))
+	if err != nil {
+		switch err {
+		case bcrypt.ErrMismatchedHashAndPassword:
+			return nil, ErrInvalidPassword
+		default:
+			return nil, err
+		}
+	}
+
+	return foundUser, nil
 }
 
 // first will query using the provided gorm.Db and will get the
