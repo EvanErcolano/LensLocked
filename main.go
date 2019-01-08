@@ -40,6 +40,7 @@ func main() {
 	r.HandleFunc("/signup", usersController.Create).Methods("POST")
 	r.Handle("/login", usersController.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersController.Login).Methods("POST")
+	r.HandleFunc("/cookietest", usersController.CookieTest).Methods("GET")
 	fmt.Println("Starting the server on :3000.....")
 	http.ListenAndServe(":3000", r)
 }

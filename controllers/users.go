@@ -89,5 +89,15 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	} // created our cookie but we must send it back via the response
 	http.SetCookie(w, &cookie)
 	fmt.Fprintln(w, user)
+}
 
+// CookieTest is used to display cookies set on current users
+func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("email")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintln(w, "Email is: ", cookie.Value)
+	fmt.Fprintf(w, "%+v", cookie)
 }
