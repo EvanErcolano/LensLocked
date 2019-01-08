@@ -3,6 +3,9 @@ package models
 import (
 	"errors"
 
+	"lenslocked.com/hash"
+	"lenslocked.com/rand"
+
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/jinzhu/gorm"
@@ -21,6 +24,7 @@ var (
 )
 
 const userPwPepper = "aaaafe93-7942-4e3d-a4fc-e295ba99d571"
+const hmacSecretKey = "secret-hmac-key"
 
 // NewUserService takes care of setting up the db for the userService.
 // If there is an error opening the db
@@ -30,17 +34,20 @@ func NewUserService(connectionInfo string) (*UserService, error) {
 		return nil, err
 	}
 	db.LogMode(true)
+	hmac := hash.NewHMAC(hmacSecretKey)
 	// we can't defer the closing here because it closes when
 	// the func goes out of scope. so it would close before we hand it off (bad)
 	// instead we created  Close()
 	return &UserService{
-		db: db,
+		db:   db,
+		hmac: hmac,
 	}, nil
 }
 
 //UserService interacts with user objects
 type UserService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	hmac hash.HMAC
 }
 
 // DestructiveReset drops the user table and rebuilds it
@@ -79,6 +86,19 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 	var user User
 	db := us.db.Where("email = ?", email)
 	err := first(db, &user)
+	return &user, err
+}
+
+// ByRemember looks up a user with the given remember token
+// this method will handle hashing the token for us
+func (us *UserService) ByRemember(token string) (*User, error) {
+	var user User
+	tokenHash := us.hmac.Hash(token)
+	db := us.db.Where("remember_hash = ?", tokenHash)
+	err := first(db, &user)
+	if err != nil {
+		return nil, err
+	}
 	return &user, err
 }
 
@@ -131,11 +151,23 @@ func (us *UserService) Create(user *User) error {
 	}
 	user.PasswordHash = string(hashedBytes)
 	user.Password = ""
+
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+	}
+	user.RememberHash = us.hmac.Hash(user.Remember)
 	return us.db.Create(user).Error
 }
 
 // Update the provided user with all of the data in the user object
 func (us *UserService) Update(user *User) error {
+	if user.Remember != "" {
+		user.RememberHash = us.hmac.Hash(user.Remember)
+	}
 	return us.db.Save(user).Error
 }
 
@@ -161,4 +193,6 @@ type User struct {
 	Email        string `gorm:"not null;unique_index"`
 	Password     string `gorm:"-"` // - <- tells gorm to ignore this
 	PasswordHash string `gorm:"not null"`
+	Remember     string `gorm:"-"`
+	RememberHash string `gorm:"not null; unique_index"`
 }
