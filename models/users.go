@@ -26,6 +26,19 @@ var (
 const userPwPepper = "aaaafe93-7942-4e3d-a4fc-e295ba99d571"
 const hmacSecretKey = "secret-hmac-key"
 
+// User represents the user model stored in our db
+// This is used for user accounts storing both email and passwords
+// so users can login and gian access to their content
+type User struct {
+	gorm.Model
+	Name         string
+	Email        string `gorm:"not null;unique_index"`
+	Password     string `gorm:"-"` // - <- tells gorm to ignore this
+	PasswordHash string `gorm:"not null"`
+	Remember     string `gorm:"-"`
+	RememberHash string `gorm:"not null; unique_index"`
+}
+
 // UserDB is used to interact with the user database
 //
 // For pretty much all single user queries
@@ -54,19 +67,80 @@ type UserDB interface {
 	DestructiveReset() error
 }
 
+// UserService is a set of methods used to manipulate and
+// work with the user model
+type UserService interface {
+	// Authenticate will verify the provided email address and
+	// password are correct, if true, the user corresponding to
+	// that email will be returned. Otherwise, you will receive:
+	// ErrNotFound, ErrInvalidPassword, or another error
+	Authenticate(email, password string) (*User, error)
+	UserDB
+}
+
 // NewUserService takes care of setting up the db for the userService.
 // If there is an error opening the db
-func NewUserService(connectionInfo string) (*UserService, error) {
+func NewUserService(connectionInfo string) (UserService, error) {
 	ug, err := newUserGorm(connectionInfo)
 	if err != nil {
 		return nil, err
 	}
-	return &UserService{
+	return &userService{
 		UserDB: &userValidator{
 			UserDB: ug,
 		},
 	}, nil
 }
+
+var _ UserService = &userService{}
+
+//userService interacts with user objects
+type userService struct {
+	UserDB
+}
+
+// Authenticate can be used to authenticate a user with the
+// provided email address and password.
+// If the email address provided is invalid, this will return
+//   nil, ErrNotFound
+// If the password provided is invalid, this will return
+//   nil, ErrInvalidPassword
+// If the email and password are both valid, this will return
+//   user, nil
+// Otherwise if another error is encountered this will return
+//   nil, error
+func (us *userService) Authenticate(email, password string) (*User, error) {
+	foundUser, err := us.ByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+userPwPepper))
+	if err != nil {
+		switch err {
+		case bcrypt.ErrMismatchedHashAndPassword:
+			return nil, ErrInvalidPassword
+		default:
+			return nil, err
+		}
+	}
+
+	return foundUser, nil
+}
+
+// Ensure uservalidator implements this interface
+var _ UserDB = &userValidator{}
+
+// userValidator is a lyaer that validates things before htey go
+// go to the db layer via nroalization and validation
+// its methods will match whatever exists in userdb
+type userValidator struct {
+	UserDB
+}
+
+// Ignored but allows us to check if userGorm ever stops
+// satisfying the userdb interface
+var _ UserDB = &userGorm{}
 
 func newUserGorm(connectionInfo string) (*userGorm, error) {
 	db, err := gorm.Open("postgres", connectionInfo)
@@ -84,42 +158,9 @@ func newUserGorm(connectionInfo string) (*userGorm, error) {
 	}, nil
 }
 
-// Ignored but allows us to check if userGorm ever stops
-// satisfying the userdb interface
-var _ UserDB = &userGorm{}
-
-//UserService interacts with user objects
-type UserService struct {
-	UserDB
-}
-
-// userValidator is a lyaer that validates things before htey go
-// go to the db layer via nroalization and validation
-// its methods will match whatever exists in userdb
-type userValidator struct {
-	UserDB
-}
-
 type userGorm struct {
 	db   *gorm.DB
 	hmac hash.HMAC
-}
-
-// DestructiveReset drops the user table and rebuilds it
-func (ug *userGorm) DestructiveReset() error {
-	if err := ug.db.DropTableIfExists(&User{}).Error; err != nil {
-		return err
-	}
-	return ug.AutoMigrate()
-}
-
-// AutoMigrate will attempt to automatically migrate the
-// users table
-func (ug *userGorm) AutoMigrate() error {
-	if err := ug.db.AutoMigrate(&User{}).Error; err != nil {
-		return err
-	}
-	return nil
 }
 
 func (ug *userGorm) ByID(id uint) (*User, error) {
@@ -151,46 +192,6 @@ func (ug *userGorm) ByRemember(token string) (*User, error) {
 		return nil, err
 	}
 	return &user, err
-}
-
-// Authenticate can be used to authenticate a user with the
-// provided email address and password.
-// If the email address provided is invalid, this will return
-//   nil, ErrNotFound
-// If the password provided is invalid, this will return
-//   nil, ErrInvalidPassword
-// If the email and password are both valid, this will return
-//   user, nil
-// Otherwise if another error is encountered this will return
-//   nil, error
-func (us *UserService) Authenticate(email, password string) (*User, error) {
-	foundUser, err := us.ByEmail(email)
-	if err != nil {
-		return nil, err
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+userPwPepper))
-	if err != nil {
-		switch err {
-		case bcrypt.ErrMismatchedHashAndPassword:
-			return nil, ErrInvalidPassword
-		default:
-			return nil, err
-		}
-	}
-
-	return foundUser, nil
-}
-
-// first will query using the provided gorm.Db and will get the
-// first item returned and place it into dst. If nothing is returned
-// then it will return ErrNotFound
-func first(db *gorm.DB, dst interface{}) error {
-	err := db.First(dst).Error
-	if err == gorm.ErrRecordNotFound {
-		return ErrNotFound
-	}
-	return err
 }
 
 // Create creates a user in the db via GORM
@@ -238,12 +239,30 @@ func (ug *userGorm) Close() error {
 	return ug.db.Close()
 }
 
-type User struct {
-	gorm.Model
-	Name         string
-	Email        string `gorm:"not null;unique_index"`
-	Password     string `gorm:"-"` // - <- tells gorm to ignore this
-	PasswordHash string `gorm:"not null"`
-	Remember     string `gorm:"-"`
-	RememberHash string `gorm:"not null; unique_index"`
+// DestructiveReset drops the user table and rebuilds it
+func (ug *userGorm) DestructiveReset() error {
+	if err := ug.db.DropTableIfExists(&User{}).Error; err != nil {
+		return err
+	}
+	return ug.AutoMigrate()
+}
+
+// AutoMigrate will attempt to automatically migrate the
+// users table
+func (ug *userGorm) AutoMigrate() error {
+	if err := ug.db.AutoMigrate(&User{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// first will query using the provided gorm.Db and will get the
+// first item returned and place it into dst. If nothing is returned
+// then it will return ErrNotFound
+func first(db *gorm.DB, dst interface{}) error {
+	err := db.First(dst).Error
+	if err == gorm.ErrRecordNotFound {
+		return ErrNotFound
+	}
+	return err
 }
