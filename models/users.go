@@ -134,7 +134,7 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 // Ensure uservalidator implements this interface
 var _ UserDB = &userValidator{}
 
-type userValidatorFunc func(*User) error
+type userValidatorFunc func(*User) error // is this an inteface?
 
 func runUserValidationFuncs(user *User, fns ...userValidatorFunc) error {
 	for _, fn := range fns {
@@ -167,16 +167,8 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 
 // Create creates a user in the db via GORM
 func (uv *userValidator) Create(user *User) error {
-	if user.Remember == "" {
-		token, err := rand.RememberToken()
-		if err != nil {
-			return err
-		}
-		user.Remember = token
-	}
-
 	// run all validation funcs and return any errors
-	err := runUserValidationFuncs(user, uv.bcryptPassword, uv.hmacRemember)
+	err := runUserValidationFuncs(user, uv.bcryptPassword, uv.setRememberIfUnset, uv.hmacRemember)
 	if err != nil {
 		return err
 	}
@@ -223,6 +215,18 @@ func (uv *userValidator) hmacRemember(user *User) error {
 		return nil
 	}
 	user.RememberHash = uv.hmac.Hash(user.Remember)
+	return nil
+}
+
+func (uv *userValidator) setRememberIfUnset(user *User) error {
+	if user.Remember != "" {
+		return nil
+	}
+	token, err := rand.RememberToken()
+	if err != nil {
+		return err
+	}
+	user.Remember = token
 	return nil
 }
 
