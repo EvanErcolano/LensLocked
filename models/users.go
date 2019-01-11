@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"strings"
 
 	"lenslocked.com/hash"
 	"lenslocked.com/rand"
@@ -153,13 +154,27 @@ type userValidator struct {
 	hmac hash.HMAC
 }
 
+// byEmail will normalize the email address before calling
+// ByEmail on the UserDb field.
+func (uv *userValidator) byEmail(email string) (*User, error) {
+	user := User{
+		Email: email,
+	}
+	err := runUserValidationFuncs(&user, uv.normalizeEmail)
+	if err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByEmail(user.Email)
+}
+
 // ByRemember will hash the remember token and then call
 // ByRemember on the subsequent UserDB layer
 func (uv *userValidator) ByRemember(token string) (*User, error) {
 	user := User{
 		Remember: token,
 	}
-	if err := runUserValidationFuncs(&user, uv.hmacRemember); err != nil {
+	err := runUserValidationFuncs(&user, uv.hmacRemember)
+	if err != nil {
 		return nil, err
 	}
 	return uv.UserDB.ByRemember(user.RememberHash)
@@ -168,7 +183,11 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 // Create creates a user in the db via GORM
 func (uv *userValidator) Create(user *User) error {
 	// run all validation funcs and return any errors
-	err := runUserValidationFuncs(user, uv.bcryptPassword, uv.setRememberIfUnset, uv.hmacRemember)
+	err := runUserValidationFuncs(user,
+		uv.bcryptPassword,
+		uv.setRememberIfUnset,
+		uv.hmacRemember,
+		uv.normalizeEmail)
 	if err != nil {
 		return err
 	}
@@ -178,7 +197,10 @@ func (uv *userValidator) Create(user *User) error {
 // Update will hash a remember token if it is provided.
 func (uv *userValidator) Update(user *User) error {
 	// run all validation funcs and return any errors
-	err := runUserValidationFuncs(user, uv.bcryptPassword, uv.hmacRemember)
+	err := runUserValidationFuncs(user,
+		uv.bcryptPassword,
+		uv.hmacRemember,
+		uv.normalizeEmail)
 	if err != nil {
 		return err
 	}
@@ -240,6 +262,13 @@ func (uv *userValidator) ensureIDGreaterThan(n uint) userValidatorFunc {
 		}
 		return nil
 	})
+}
+
+// normalizeEmail removes extra spaces and lowercases the provided email
+func (uv *userValidator) normalizeEmail(user *User) error {
+	user.Email = strings.TrimSpace(user.Email)
+	user.Email = strings.ToLower(user.Email)
+	return nil
 }
 
 // Ignored but allows us to check if userGorm ever stops
