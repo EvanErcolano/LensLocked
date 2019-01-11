@@ -187,8 +187,11 @@ func (uv *userValidator) Update(user *User) error {
 
 // Delete validates the user id that is passed into Delete
 func (uv *userValidator) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
+	var user User
+	user.ID = id
+	err := runUserValidationFuncs(&user, uv.ensureIDGreaterThan(0))
+	if err != nil {
+		return nil
 	}
 	return uv.UserDB.Delete(id)
 }
@@ -228,6 +231,15 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 	}
 	user.Remember = token
 	return nil
+}
+
+func (uv *userValidator) ensureIDGreaterThan(n uint) userValidatorFunc {
+	return userValidatorFunc(func(user *User) error {
+		if user.ID <= n {
+			return ErrInvalidID
+		}
+		return nil
+	})
 }
 
 // Ignored but allows us to check if userGorm ever stops
