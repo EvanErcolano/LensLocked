@@ -40,6 +40,13 @@ var (
 
 	// ErrPasswordRequired is returned when a create is attempted without a password
 	ErrPasswordRequired = errors.New("models: password is required")
+
+	// ErrRememberTooShort when a rememebr token is not at least 32 bytes
+	ErrRememberTooShort = errors.New("models: Remember token must be at lest 32 bytes")
+
+	// ErrRememberRequired is returned when a create or update is attempted
+	// without a user remember token hash
+	ErrRememberRequired = errors.New("models: remember token is required")
 )
 
 const userPwPepper = "aaaafe93-7942-4e3d-a4fc-e295ba99d571"
@@ -212,7 +219,9 @@ func (uv *userValidator) Create(user *User) error {
 		uv.bcryptPassword,
 		uv.passwordHashRequired,
 		uv.setRememberIfUnset,
+		uv.rememberMinBytes,
 		uv.hmacRemember,
+		uv.rememberHashRequired,
 		uv.normalizeEmail,
 		uv.requireEmail,
 		uv.emailFormat,
@@ -231,7 +240,9 @@ func (uv *userValidator) Update(user *User) error {
 		uv.passwordMinLength,
 		uv.bcryptPassword,
 		uv.passwordHashRequired,
+		uv.rememberMinBytes,
 		uv.hmacRemember,
+		uv.rememberHashRequired,
 		uv.normalizeEmail,
 		uv.requireEmail,
 		uv.emailFormat,
@@ -290,6 +301,20 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 	return nil
 }
 
+func (uv *userValidator) rememberMinBytes(user *User) error {
+	if user.Remember == "" {
+		return nil
+	}
+	n, err := rand.NBytes(user.Remember)
+	if err != nil {
+		return err
+	}
+	if n < 32 {
+		return ErrRememberTooShort
+	}
+	return nil
+}
+
 func (uv *userValidator) ensureIDGreaterThan(n uint) userValidatorFunc {
 	return userValidatorFunc(func(user *User) error {
 		if user.ID <= n {
@@ -297,6 +322,13 @@ func (uv *userValidator) ensureIDGreaterThan(n uint) userValidatorFunc {
 		}
 		return nil
 	})
+}
+
+func (uv *userValidator) rememberHashRequired(user *User) error {
+	if user.RememberHash == "" {
+		return ErrRememberRequired
+	}
+	return nil
 }
 
 // normalizeEmail removes extra spaces and lowercases the provided email
