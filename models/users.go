@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 
@@ -12,41 +11,6 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-)
-
-var (
-	// ErrNotFound is returned when a resource when a resource cannot be found in db
-	ErrNotFound = errors.New("models: resource not found")
-
-	// ErrIDInvalid is returned when an invalid ID is provided to a method like delete
-	ErrIDInvalid = errors.New("models: ID provided was invalid")
-
-	// ErrPasswordIncorrect is returned when an invalid password is provided
-	ErrPasswordIncorrect = errors.New("models: Password provided was invalid")
-
-	//ErrEmailRequired is returned when a user supplies a blank email address
-	ErrEmailRequired = errors.New("models: email address is required")
-
-	//ErrEmailInvalid is returned when a user supplies an invalid email address
-	ErrEmailInvalid = errors.New("models: email address is not valid")
-
-	// ErrEmailTaken is returned when the requested email address already
-	// belongs to a different user during an update or create
-	ErrEmailTaken = errors.New("models: email address is already taken")
-
-	// ErrPasswordTooShort is returned when an update or create is attemped with
-	// a password that is less than the required number of characters
-	ErrPasswordTooShort = errors.New("models: password must be at least 8 characters long")
-
-	// ErrPasswordRequired is returned when a create is attempted without a password
-	ErrPasswordRequired = errors.New("models: password is required")
-
-	// ErrRememberTooShort when a rememebr token is not at least 32 bytes
-	ErrRememberTooShort = errors.New("models: Remember token must be at lest 32 bytes")
-
-	// ErrRememberRequired is returned when a create or update is attempted
-	// without a user remember token hash
-	ErrRememberRequired = errors.New("models: remember token is required")
 )
 
 const userPwPepper = "aaaafe93-7942-4e3d-a4fc-e295ba99d571"
