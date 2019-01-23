@@ -31,9 +31,7 @@ type Users struct {
 // New is used to render the form where they can create a new user account
 // GET / signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
-		panic(err)
-	}
+	u.NewView.Render(w, nil)
 }
 
 // SignupForm
