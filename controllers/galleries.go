@@ -22,7 +22,7 @@ type Galleries struct {
 }
 
 type GalleryForm struct {
-	title string `schema:"title"`
+	Title string `schema:"title"`
 }
 
 // POST /galleries
@@ -36,7 +36,7 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	gallery := models.Gallery{
-		Title: form.title,
+		Title: form.Title,
 	}
 	if err := g.gs.Create(&gallery); err != nil {
 		vd.SetAlert(err)
