@@ -24,14 +24,15 @@ const (
 func main() {
 	connString := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable",
 		host, port, user, dbname)
-	us, err := models.NewUserService(connString)
+	services, err := models.NewServices(connString)
 	must(err)
-	defer us.Close()
-	us.AutoMigrate()
+	// defer us.Close()
+	// TODO: fix this
+	// us.AutoMigrate()
 	// us.DestructiveReset()
 
 	staticController := controllers.NewStatic()
-	usersController := controllers.NewUsers(us)
+	usersController := controllers.NewUsers(services.User)
 
 	r := mux.NewRouter()
 	r.Handle("/", staticController.Home).Methods("GET")
