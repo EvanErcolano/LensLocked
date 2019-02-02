@@ -26,9 +26,9 @@ func main() {
 		host, port, user, dbname)
 	services, err := models.NewServices(connString)
 	must(err)
-	// defer us.Close()
-	// TODO: fix this
-	// us.AutoMigrate()
+	defer services.Close()
+
+	services.AutoMigrate()
 	// us.DestructiveReset()
 
 	staticController := controllers.NewStatic()
