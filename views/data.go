@@ -6,7 +6,7 @@ const (
 	AlertLvlError   = "danger"
 	AlertLvlWarning = "warning"
 	AlertLvlInfo    = "info"
-	AlertLvlDanger  = "success"
+	AlertLvlSuccess = "success"
 
 	// AlertMsgGeneric is displayed when any random error occurs
 	AlertMsgGeneric = "Something with wrong. Please try again."
