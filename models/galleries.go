@@ -19,6 +19,7 @@ type GalleryService interface {
 type GalleryDB interface {
 	ByID(id uint) (*Gallery, error)
 	Create(gallery *Gallery) error
+	// Edit(gallery *Gallery) error
 }
 
 func NewGalleryService(db *gorm.DB) GalleryService {
