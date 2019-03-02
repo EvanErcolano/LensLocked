@@ -63,14 +63,36 @@ func (g *Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Gallery not found", http.StatusNotFound)
 		return
 	}
-	// doo shit to edit
-
-	// save that bad boy back
-
-	// render the new gallery
 	var vd views.Data
 	vd.Yield = gallery
 	g.EditView.Render(w, vd)
+}
+
+// POST /galleries/:id/update
+func (g *Galleries) Update(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r)
+	if err != nil {
+		return
+	}
+
+	// verify user actually owns this gallery
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "Gallery not found", http.StatusNotFound)
+		return
+	}
+	var vd views.Data
+	var form GalleryForm
+	vd.Yield = gallery
+
+	if err := parseForm(r, &form); err != nil {
+		log.Println(err)
+		vd.SetAlert(err)
+		g.EditView.Render(w, vd)
+		return
+	}
+	gallery.Title = form.Title
+	fmt.Fprintln(w, gallery)
 }
 
 // POST /galleries
