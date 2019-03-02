@@ -11,7 +11,7 @@
             {{if .Alert}}
                 {{template "alert" .Alert}}
             {{end}}
-            
+
             {{template "yield" .Yield}}
 
             {{template "footer"}}
@@ -21,6 +21,12 @@
         </script>
         <script src="//maxcdn.boostrapcdn.com/boostrap/3.3.7.js/bootstrap.min.js">
         </script>
+        <style>
+            footer {
+                padding-top: 60px;
+            }
+        </style>
+
     </body>
 </html>
 {{end}}
