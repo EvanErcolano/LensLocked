@@ -19,20 +19,20 @@ const (
 
 func NewGalleries(gs models.GalleryService, r *mux.Router) *Galleries {
 	return &Galleries{
-		New:      views.NewView("bootstrap", "galleries/new"),
-		ShowView: views.NewView("bootstrap", "galleries/show"),
-		EditView: views.NewView("bootstrap", "galleries/edit"),
-		gs:       gs,
-		r:        r,
+		New:        views.NewView("bootstrap", "galleries/new"),
+		ShowView:   views.NewView("bootstrap", "galleries/show"),
+		EditView:   views.NewView("bootstrap", "galleries/edit"),
+		gs:         gs,
+		r:          r,
 	}
 }
 
 type Galleries struct {
-	New      *views.View
-	ShowView *views.View
-	EditView *views.View
-	gs       models.GalleryService
-	r        *mux.Router
+	New        *views.View
+	ShowView   *views.View
+	EditView   *views.View
+	gs         models.GalleryService
+	r          *mux.Router
 }
 
 type GalleryForm struct {
@@ -66,6 +66,31 @@ func (g *Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 	var vd views.Data
 	vd.Yield = gallery
 	g.EditView.Render(w, vd)
+}
+
+// POST /galleries/:id/delete
+func (g *Galleries) Delete(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(w, r)
+	if err != nil {
+		return
+	}
+
+	// verify user actually owns this gallery
+	user := context.User(r.Context())
+	if gallery.UserID != user.ID {
+		http.Error(w, "Gallery not found", http.StatusNotFound)
+		return
+	}
+	var vd views.Data
+	err = g.gs.Delete(gallery.ID)
+	if err != nil {
+		vd.SetAlert(err)
+		vd.Yield = gallery
+		g.EditView.Render(w, vd)
+		return
+	}
+	//TODO: redirect to index page
+	fmt.Fprintln(w, "Succesfully deleted.")
 }
 
 // POST /galleries/:id/update
