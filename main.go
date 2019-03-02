@@ -35,7 +35,12 @@ func main() {
 	staticController := controllers.NewStatic()
 	usersController := controllers.NewUsers(services.User)
 	galleriesController := controllers.NewGalleries(services.Gallery, r)
-	requireUserMw := middleware.RequireUser{services.User}
+	userMw := middleware.User{
+		UserService: services.User,
+	}
+	requireUserMw := middleware.RequireUser{
+		User: userMw,
+	}
 
 	r.Handle("/", staticController.Home).Methods("GET")
 	r.Handle("/contact", staticController.Contact).Methods("GET")
@@ -43,7 +48,6 @@ func main() {
 	r.HandleFunc("/signup", usersController.Create).Methods("POST")
 	r.Handle("/login", usersController.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersController.Login).Methods("POST")
-	r.HandleFunc("/cookietest", usersController.CookieTest).Methods("GET")
 
 	// Gallery routes
 	r.Handle("/galleries/new", requireUserMw.Apply(galleriesController.New)).Methods("GET")
@@ -55,7 +59,7 @@ func main() {
 	r.HandleFunc("/galleries/{id:[0-9]+}", galleriesController.Show).Methods("GET").Name(controllers.ShowGallery)
 
 	fmt.Println("Starting the server on :3000.....")
-	http.ListenAndServe(":3000", r)
+	http.ListenAndServe(":3000", userMw.Apply(r))
 }
 
 func must(err error) {
