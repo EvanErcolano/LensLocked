@@ -34,6 +34,7 @@
 </div>
 {{end}}
 
+
 {{define "editGalleryForm"}}
 <form action="/galleries/{{.ID}}/update" method="POST"
   class="form-horizontal">
@@ -76,5 +77,11 @@
 {{end}}
 
 {{define "galleryImages"}}
-<p>Coming soon...</p>
+<ul>
+  {{range .Images}}
+    <li>
+      {{.}}
+    </li>
+  {{end}}
+</ul>
 {{end}}
